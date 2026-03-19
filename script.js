@@ -31,6 +31,7 @@ const auxEyebrow = document.getElementById("aux-eyebrow");
 const auxHighlight = document.getElementById("aux-highlight");
 const auxDescription = document.getElementById("aux-description");
 const gameSelectButtons = [...document.querySelectorAll("[data-game-select]")];
+const boardFrame = document.querySelector(".board-frame");
 
 const ui = {
   setHeader({ eyebrow, title, description }) {
@@ -326,6 +327,8 @@ function createTetrisGame() {
   let clearingRows = [];
   let clearingSince = 0;
   let selectedTrack = localStorage.getItem("tetris-music-track") || "classic";
+  let touchProcessedX = 0;
+  let touchProcessedY = 0;
 
   function createBoard() {
     return Array.from({ length: rows }, () => Array(columns).fill(0));
@@ -921,6 +924,7 @@ function createTetrisGame() {
       "Seta para cima gira a peca",
       "Seta para baixo acelera a descida",
       "Espaco derruba a peca instantaneamente",
+      "No celular: arraste para os lados, arraste para baixo e toque para girar",
       "Tecla P pausa a partida",
       "Esc volta ao menu principal",
     ]);
@@ -1000,6 +1004,80 @@ function createTetrisGame() {
     draw();
   }
 
+  function handleTouchStart() {
+    touchProcessedX = 0;
+    touchProcessedY = 0;
+  }
+
+  function handleTouchMove(gesture) {
+    if (!isRunning && !gameOver && !isPaused) {
+      startGame();
+    }
+
+    if (gameOver || isPaused || isClearingLines) {
+      return;
+    }
+
+    let changed = false;
+    const horizontalStep = 24;
+    const verticalStep = 26;
+
+    while (gesture.totalX - touchProcessedX >= horizontalStep) {
+      if (movePiece(1, 0)) {
+        playSound("move");
+        changed = true;
+      }
+      touchProcessedX += horizontalStep;
+    }
+
+    while (gesture.totalX - touchProcessedX <= -horizontalStep) {
+      if (movePiece(-1, 0)) {
+        playSound("move");
+        changed = true;
+      }
+      touchProcessedX -= horizontalStep;
+    }
+
+    while (gesture.totalY - touchProcessedY >= verticalStep) {
+      softDrop();
+      touchProcessedY += verticalStep;
+      changed = true;
+    }
+
+    if (changed) {
+      draw();
+    }
+  }
+
+  function handleTouchEnd(gesture) {
+    const absX = Math.abs(gesture.totalX);
+    const absY = Math.abs(gesture.totalY);
+    const isTap = absX < 12 && absY < 12 && gesture.duration < 260;
+    const isHardDropSwipe = gesture.totalY > 140 && absY > absX && gesture.duration < 350;
+
+    if (!isRunning && !gameOver && !isPaused && isTap) {
+      startGame();
+      return;
+    }
+
+    if (gameOver || isPaused || isClearingLines) {
+      return;
+    }
+
+    if (isTap) {
+      if (rotatePiece()) {
+        playSound("rotate");
+      }
+      draw();
+      return;
+    }
+
+    if (isHardDropSwipe) {
+      hardDrop();
+      draw();
+    }
+  }
+
   return {
     id: "tetris",
     activate,
@@ -1010,6 +1088,9 @@ function createTetrisGame() {
     toggleSound,
     toggleTrack,
     handleKeydown,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
   };
 }
 
@@ -1034,6 +1115,8 @@ function createSnakeGame() {
   let isRunning = false;
   let isPaused = false;
   let gameOver = false;
+  let touchAnchorX = 0;
+  let touchAnchorY = 0;
 
   function updateScoreboard() {
     ui.setStats([
@@ -1370,6 +1453,7 @@ function createSnakeGame() {
     });
     ui.setControls([
       "Setas mudam a direcao da cobrinha",
+      "No celular: arraste para a direcao desejada",
       "Nao e permitido dar meia volta instantanea",
       "Cada fruta aumenta sua pontuacao e o ritmo",
       "Tecla P pausa a partida",
@@ -1428,6 +1512,43 @@ function createSnakeGame() {
     }
   }
 
+  function handleTouchStart(gesture) {
+    touchAnchorX = gesture.x;
+    touchAnchorY = gesture.y;
+  }
+
+  function handleTouchMove(gesture) {
+    if (gameOver || isPaused) {
+      return;
+    }
+
+    const deltaX = gesture.x - touchAnchorX;
+    const deltaY = gesture.y - touchAnchorY;
+    const threshold = 18;
+
+    if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+      return;
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      queueDirection({ x: deltaX > 0 ? 1 : -1, y: 0 });
+    } else {
+      queueDirection({ x: 0, y: deltaY > 0 ? 1 : -1 });
+    }
+
+    touchAnchorX = gesture.x;
+    touchAnchorY = gesture.y;
+  }
+
+  function handleTouchEnd(gesture) {
+    const absX = Math.abs(gesture.totalX);
+    const absY = Math.abs(gesture.totalY);
+
+    if (!isRunning && !gameOver && !isPaused && absX < 12 && absY < 12 && gesture.duration < 260) {
+      startGame();
+    }
+  }
+
   return {
     id: "snake",
     activate,
@@ -1438,6 +1559,9 @@ function createSnakeGame() {
     toggleSound,
     toggleTrack,
     handleKeydown,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
   };
 }
 
@@ -1491,5 +1615,129 @@ window.addEventListener("keydown", (event) => {
 
   activeGame.handleKeydown(event);
 });
+
+const touchState = {
+  identifier: null,
+  startX: 0,
+  startY: 0,
+  lastX: 0,
+  lastY: 0,
+  startTime: 0,
+};
+
+function getTrackedTouch(touchList) {
+  if (touchState.identifier === null) {
+    return null;
+  }
+
+  for (const touch of touchList) {
+    if (touch.identifier === touchState.identifier) {
+      return touch;
+    }
+  }
+
+  return null;
+}
+
+function isTouchGestureAvailable(eventTarget) {
+  if (body.dataset.view !== "game" || !activeGame) {
+    return false;
+  }
+
+  return !eventTarget.closest("button");
+}
+
+function createGesturePayload(touch) {
+  return {
+    x: touch.clientX,
+    y: touch.clientY,
+    totalX: touch.clientX - touchState.startX,
+    totalY: touch.clientY - touchState.startY,
+    deltaX: touch.clientX - touchState.lastX,
+    deltaY: touch.clientY - touchState.lastY,
+    duration: performance.now() - touchState.startTime,
+  };
+}
+
+boardFrame.addEventListener(
+  "touchstart",
+  (event) => {
+    if (!isTouchGestureAvailable(event.target) || touchState.identifier !== null) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    touchState.identifier = touch.identifier;
+    touchState.startX = touch.clientX;
+    touchState.startY = touch.clientY;
+    touchState.lastX = touch.clientX;
+    touchState.lastY = touch.clientY;
+    touchState.startTime = performance.now();
+
+    activeGame.handleTouchStart?.({
+      x: touch.clientX,
+      y: touch.clientY,
+      totalX: 0,
+      totalY: 0,
+      deltaX: 0,
+      deltaY: 0,
+      duration: 0,
+    });
+    event.preventDefault();
+  },
+  { passive: false }
+);
+
+boardFrame.addEventListener(
+  "touchmove",
+  (event) => {
+    if (touchState.identifier === null || body.dataset.view !== "game" || !activeGame) {
+      return;
+    }
+
+    const touch = getTrackedTouch(event.touches);
+    if (!touch) {
+      return;
+    }
+
+    const gesture = createGesturePayload(touch);
+    activeGame.handleTouchMove?.(gesture);
+    touchState.lastX = touch.clientX;
+    touchState.lastY = touch.clientY;
+    event.preventDefault();
+  },
+  { passive: false }
+);
+
+function finishTouchGesture(event) {
+  if (touchState.identifier === null || body.dataset.view !== "game" || !activeGame) {
+    return;
+  }
+
+  const touch = getTrackedTouch(event.changedTouches);
+  if (!touch) {
+    return;
+  }
+
+  const gesture = createGesturePayload(touch);
+  activeGame.handleTouchEnd?.(gesture);
+  touchState.identifier = null;
+}
+
+boardFrame.addEventListener(
+  "touchend",
+  (event) => {
+    finishTouchGesture(event);
+  },
+  { passive: false }
+);
+
+boardFrame.addEventListener(
+  "touchcancel",
+  (event) => {
+    finishTouchGesture(event);
+  },
+  { passive: false }
+);
 
 showMenu();
