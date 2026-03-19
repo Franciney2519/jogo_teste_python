@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arcade Select</title>
+  <link rel="stylesheet" href="style.css?v=20260313-0045">
+</head>
+<body data-view="menu" data-game="tetris">
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <main id="menu-screen" class="menu-screen">
+    <section class="menu-hero">
+      <p class="eyebrow">Arcade Select</p>
+      <h1>Escolha seu jogo</h1>
+      <p class="description">
+        Entre no fliperama, selecione um classico e jogue direto no navegador.
+      </p>
+    </section>
+
+    <section class="menu-grid" aria-label="Selecao de jogos">
+      <button class="menu-card" type="button" data-game-select="tetris">
+        <span class="menu-card-eyebrow">Arcade 1989</span>
+        <strong class="menu-card-title">Tetris</strong>
+        <span class="menu-card-text">
+          Empilhe pecas, feche linhas e sobreviva ao ritmo cada vez mais rapido.
+        </span>
+      </button>
+
+      <button class="menu-card snake-card" type="button" data-game-select="snake">
+        <span class="menu-card-eyebrow">Arcade 1976</span>
+        <strong class="menu-card-title">Cobrinha</strong>
+        <span class="menu-card-text">
+          Cresca a cobrinha, colete frutas e nao bata nas paredes nem em si mesma.
+        </span>
+      </button>
+    </section>
+  </main>
+
+  <main id="game-screen" class="app screen-hidden" hidden>
+    <section class="panel">
+      <p id="game-eyebrow" class="eyebrow">Arcade 1989</p>
+      <h1 id="game-title">Tetris</h1>
+      <p id="game-description" class="description">
+        Empilhe pecas, complete linhas e evite que o tabuleiro chegue ao topo.
+      </p>
+
+      <div class="scoreboard" aria-label="Placar">
+        <div class="score-card">
+          <span class="stat-label">Pontos</span>
+          <strong class="stat-value">0</strong>
+        </div>
+        <div class="score-card">
+          <span class="stat-label">Linhas</span>
+          <strong class="stat-value">0</strong>
+        </div>
+        <div class="score-card">
+          <span class="stat-label">Nivel</span>
+          <strong class="stat-value">1</strong>
+        </div>
+        <div class="score-card">
+          <span class="stat-label">Recorde</span>
+          <strong class="stat-value">0</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="restart-button" class="primary-button arcade-button" type="button">
+          <span class="button-label">Jogar novamente</span>
+          <span class="button-subtitle">insert coin</span>
+        </button>
+        <button id="pause-button" class="secondary-button" type="button">
+          Pausar
+        </button>
+        <button id="sound-button" class="secondary-button" type="button">
+          Som ligado
+        </button>
+        <button id="track-button" class="secondary-button" type="button">
+          Trilha: Classica
+        </button>
+        <button id="menu-button" class="secondary-button" type="button">
+          Voltar ao menu
+        </button>
+      </div>
+
+      <div class="instructions">
+        <p>Controles</p>
+        <ul id="controls-list"></ul>
+      </div>
+    </section>
+
+    <section class="game-shell" aria-label="Area do jogo">
+      <div class="boards">
+        <div class="board-frame">
+          <canvas
+            id="game"
+            width="320"
+            height="640"
+            aria-label="Tabuleiro do jogo"
+          ></canvas>
+          <div id="overlay" class="overlay">
+            <h2 id="overlay-title">Pronto para jogar?</h2>
+            <p id="overlay-text">Escolha um jogo no menu.</p>
+            <button id="overlay-action" class="overlay-button button-hidden" type="button">
+              Jogar novamente
+            </button>
+          </div>
+        </div>
+
+        <aside class="aux-panel">
+          <p id="aux-title">Painel auxiliar</p>
+          <canvas
+            id="aux-canvas"
+            width="160"
+            height="160"
+            aria-label="Painel auxiliar"
+          ></canvas>
+          <div class="legend">
+            <span id="aux-eyebrow">Arcade mode</span>
+            <strong id="aux-highlight">Selecione um jogo</strong>
+            <p id="aux-description" class="aux-description">
+              O painel se adapta ao jogo escolhido.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js?v=20260313-0045"></script>
+</body>
+</html>
