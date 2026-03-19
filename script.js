@@ -120,7 +120,6 @@ function showMenu() {
   body.dataset.game = "tetris";
   document.title = "Arcade Select";
   setActiveScreen("menu");
-  touchControls.classList.add("control-hidden");
 }
 
 function selectGame(gameId) {
@@ -142,34 +141,30 @@ function selectGame(gameId) {
 }
 
 function updateTouchControls() {
-  if (!activeGame) {
-    touchControls.classList.add("control-hidden");
+  if (!activeGame || !touchControls) {
     return;
   }
 
-  touchControls.classList.remove("control-hidden");
-
   const configByGame = {
     tetris: {
-      up: { label: "↻", hidden: false },
-      left: { label: "←", hidden: false },
-      action: { label: "DROP", hidden: false },
-      right: { label: "→", hidden: false },
-      down: { label: "↓", hidden: false },
+      up: { label: "GIRAR" },
+      left: { label: "LEFT" },
+      action: { label: "DROP" },
+      right: { label: "RIGHT" },
+      down: { label: "DOWN" },
     },
     snake: {
-      up: { label: "↑", hidden: false },
-      left: { label: "←", hidden: false },
-      action: { label: "START", hidden: false },
-      right: { label: "→", hidden: false },
-      down: { label: "↓", hidden: false },
+      up: { label: "UP" },
+      left: { label: "LEFT" },
+      action: { label: "START" },
+      right: { label: "RIGHT" },
+      down: { label: "DOWN" },
     },
   };
 
   const gameConfig = configByGame[activeGame.id];
   touchButtons.forEach((button) => {
     const config = gameConfig?.[button.dataset.touchAction];
-    button.hidden = Boolean(config?.hidden);
     button.textContent = config?.label || button.textContent;
   });
 }
