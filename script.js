@@ -20,6 +20,7 @@ const pauseButton = document.getElementById("pause-button");
 const soundButton = document.getElementById("sound-button");
 const trackButton = document.getElementById("track-button");
 const menuButton = document.getElementById("menu-button");
+const touchToggleButton = document.getElementById("touch-toggle-button");
 
 const overlay = document.getElementById("overlay");
 const overlayTitle = document.getElementById("overlay-title");
@@ -34,6 +35,8 @@ const gameSelectButtons = [...document.querySelectorAll("[data-game-select]")];
 const boardFrame = document.querySelector(".board-frame");
 const touchControls = document.getElementById("touch-controls");
 const touchButtons = [...document.querySelectorAll("[data-touch-action]")];
+const touchControlsStorageKey = "arcade-touch-controls-visible";
+let touchControlsVisible = localStorage.getItem(touchControlsStorageKey) !== "false";
 
 const ui = {
   setHeader({ eyebrow, title, description }) {
@@ -99,6 +102,23 @@ const ui = {
     auxCtx.clearRect(0, 0, auxCanvas.width, auxCanvas.height);
   },
 };
+
+function applyTouchControlsVisibility() {
+  if (!touchControls || !touchToggleButton) {
+    return;
+  }
+
+  touchControls.classList.toggle("touch-controls-hidden", !touchControlsVisible);
+  body.classList.toggle("touch-controls-visible", touchControlsVisible);
+  touchToggleButton.textContent = touchControlsVisible ? "Ocultar botoes touch" : "Mostrar botoes touch";
+  touchToggleButton.setAttribute("aria-pressed", String(touchControlsVisible));
+}
+
+function toggleTouchControlsVisibility() {
+  touchControlsVisible = !touchControlsVisible;
+  localStorage.setItem(touchControlsStorageKey, String(touchControlsVisible));
+  applyTouchControlsVisibility();
+}
 
 let activeGame = null;
 
@@ -1694,6 +1714,10 @@ menuButton.addEventListener("click", () => {
   showMenu();
 });
 
+touchToggleButton.addEventListener("click", () => {
+  toggleTouchControlsVisibility();
+});
+
 overlayActionButton.addEventListener("click", () => {
   activeGame?.reset();
   activeGame?.start?.();
@@ -1894,4 +1918,5 @@ touchButtons.forEach((button) => {
 
 window.addEventListener("pointerup", clearRepeatTimers);
 
+applyTouchControlsVisibility();
 showMenu();

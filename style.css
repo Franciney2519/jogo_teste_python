@@ -378,6 +378,14 @@ body[data-game="snake"] .game-shell {
   gap: 10px;
 }
 
+.touch-controls.touch-controls-hidden {
+  display: none !important;
+}
+
+.touch-toggle-button {
+  display: none;
+}
+
 .touch-row {
   display: flex;
   justify-content: center;
@@ -585,6 +593,40 @@ body[data-game="snake"] #game {
       inset 0 0 20px rgba(53, 240, 255, 0.08);
     backdrop-filter: blur(10px);
     z-index: 30;
+  }
+
+  body[data-view="game"] .touch-controls.touch-controls-hidden {
+    display: none;
+  }
+
+  body[data-view="game"] .touch-toggle-button {
+    position: fixed;
+    left: 50%;
+    bottom: calc(196px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 18px;
+    border: 1px solid rgba(53, 240, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(7, 10, 20, 0.92);
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow:
+      0 14px 28px rgba(0, 0, 0, 0.28),
+      inset 0 0 16px rgba(53, 240, 255, 0.08);
+    z-index: 31;
+    cursor: pointer;
+  }
+
+  body[data-view="game"]:not(.touch-controls-visible) .touch-toggle-button {
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
   .aux-panel {
