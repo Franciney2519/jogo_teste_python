@@ -32,6 +32,8 @@ const auxHighlight = document.getElementById("aux-highlight");
 const auxDescription = document.getElementById("aux-description");
 const gameSelectButtons = [...document.querySelectorAll("[data-game-select]")];
 const boardFrame = document.querySelector(".board-frame");
+const touchControls = document.getElementById("touch-controls");
+const touchButtons = [...document.querySelectorAll("[data-touch-action]")];
 
 const ui = {
   setHeader({ eyebrow, title, description }) {
@@ -118,6 +120,7 @@ function showMenu() {
   body.dataset.game = "tetris";
   document.title = "Arcade Select";
   setActiveScreen("menu");
+  touchControls.classList.add("control-hidden");
 }
 
 function selectGame(gameId) {
@@ -134,7 +137,41 @@ function selectGame(gameId) {
   body.dataset.view = "game";
   body.dataset.game = gameId;
   setActiveScreen("game");
+  updateTouchControls();
   activeGame.activate();
+}
+
+function updateTouchControls() {
+  if (!activeGame) {
+    touchControls.classList.add("control-hidden");
+    return;
+  }
+
+  touchControls.classList.remove("control-hidden");
+
+  const configByGame = {
+    tetris: {
+      up: { label: "↻", hidden: false },
+      left: { label: "←", hidden: false },
+      action: { label: "DROP", hidden: false },
+      right: { label: "→", hidden: false },
+      down: { label: "↓", hidden: false },
+    },
+    snake: {
+      up: { label: "↑", hidden: false },
+      left: { label: "←", hidden: false },
+      action: { label: "START", hidden: false },
+      right: { label: "→", hidden: false },
+      down: { label: "↓", hidden: false },
+    },
+  };
+
+  const gameConfig = configByGame[activeGame.id];
+  touchButtons.forEach((button) => {
+    const config = gameConfig?.[button.dataset.touchAction];
+    button.hidden = Boolean(config?.hidden);
+    button.textContent = config?.label || button.textContent;
+  });
 }
 
 function createAudioHelpers(storageKeyPrefix) {
@@ -1078,6 +1115,47 @@ function createTetrisGame() {
     }
   }
 
+  function handleControlAction(action) {
+    if (!isRunning && !gameOver && !isPaused) {
+      startGame();
+    }
+
+    if (gameOver || isPaused || isClearingLines) {
+      return;
+    }
+
+    switch (action) {
+      case "left":
+        if (movePiece(-1, 0)) {
+          playSound("move");
+          draw();
+        }
+        break;
+      case "right":
+        if (movePiece(1, 0)) {
+          playSound("move");
+          draw();
+        }
+        break;
+      case "down":
+        softDrop();
+        draw();
+        break;
+      case "up":
+        if (rotatePiece()) {
+          playSound("rotate");
+          draw();
+        }
+        break;
+      case "action":
+        hardDrop();
+        draw();
+        break;
+      default:
+        break;
+    }
+  }
+
   return {
     id: "tetris",
     activate,
@@ -1091,6 +1169,7 @@ function createTetrisGame() {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    handleControlAction,
   };
 }
 
@@ -1549,6 +1628,34 @@ function createSnakeGame() {
     }
   }
 
+  function handleControlAction(action) {
+    if (gameOver) {
+      return;
+    }
+
+    switch (action) {
+      case "left":
+        queueDirection({ x: -1, y: 0 });
+        break;
+      case "right":
+        queueDirection({ x: 1, y: 0 });
+        break;
+      case "up":
+        queueDirection({ x: 0, y: -1 });
+        break;
+      case "down":
+        queueDirection({ x: 0, y: 1 });
+        break;
+      case "action":
+        if (!isRunning && !gameOver && !isPaused) {
+          startGame();
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
   return {
     id: "snake",
     activate,
@@ -1562,6 +1669,7 @@ function createSnakeGame() {
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
+    handleControlAction,
   };
 }
 
@@ -1739,5 +1847,56 @@ boardFrame.addEventListener(
   },
   { passive: false }
 );
+
+const repeatingActions = new Set(["left", "right", "down"]);
+let repeatIntervalId = null;
+let repeatTimeoutId = null;
+
+function clearRepeatTimers() {
+  if (repeatTimeoutId) {
+    clearTimeout(repeatTimeoutId);
+    repeatTimeoutId = null;
+  }
+
+  if (repeatIntervalId) {
+    clearInterval(repeatIntervalId);
+    repeatIntervalId = null;
+  }
+}
+
+function runTouchControlAction(action) {
+  if (body.dataset.view !== "game" || !activeGame) {
+    return;
+  }
+
+  activeGame.handleControlAction?.(action);
+}
+
+touchButtons.forEach((button) => {
+  const action = button.dataset.touchAction;
+  const allowRepeat = button.dataset.repeat === "true" && repeatingActions.has(action);
+
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    runTouchControlAction(action);
+
+    if (!allowRepeat) {
+      return;
+    }
+
+    clearRepeatTimers();
+    repeatTimeoutId = window.setTimeout(() => {
+      repeatIntervalId = window.setInterval(() => {
+        runTouchControlAction(action);
+      }, 90);
+    }, 220);
+  });
+
+  button.addEventListener("pointerup", clearRepeatTimers);
+  button.addEventListener("pointercancel", clearRepeatTimers);
+  button.addEventListener("pointerleave", clearRepeatTimers);
+});
+
+window.addEventListener("pointerup", clearRepeatTimers);
 
 showMenu();
